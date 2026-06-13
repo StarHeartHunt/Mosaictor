@@ -1,0 +1,108 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  workflow_dispatch:
+
+# Required so the workflow can create GitHub Releases and move the nightly tag.
+permissions:
+  contents: write
+
+# A new push to master supersedes the previous nightly build; tag builds are
+# each on a distinct ref so they never cancel one another.
+concurrency:
+  group: build-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # macos-26 ships Xcode 26 with the iOS 26.5 SDK that this project targets.
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so tag builds can auto-generate release notes.
+          fetch-depth: 0
+
+      - name: Select latest Xcode
+        run: |
+          echo "Installed Xcodes:"
+          ls -d /Applications/Xcode*.app
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos || true
+
+      - name: Determine release metadata
+        id: meta
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "channel=release" >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "title=Mosaictor $TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=nightly" >> "$GITHUB_OUTPUT"
+            echo "tag=nightly" >> "$GITHUB_OUTPUT"
+            echo "title=Nightly ($SHORT_SHA)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build unsigned archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project Mosaictor.xcodeproj \
+            -scheme Mosaictor \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$PWD/build/Mosaictor.xcarchive" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM=""
+
+      - name: Package IPA
+        run: |
+          APP_PATH=$(ls -d build/Mosaictor.xcarchive/Products/Applications/*.app | head -1)
+          echo "App: $APP_PATH"
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+          IPA="build/Mosaictor-${{ steps.meta.outputs.tag }}.ipa"
+          (cd build && zip -qry "../$IPA" Payload)
+          ls -lh "$IPA"
+          echo "ipa=$IPA" >> "$GITHUB_ENV"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mosaictor-${{ steps.meta.outputs.tag }}-ipa
+          path: ${{ env.ipa }}
+          if-no-files-found: error
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES_FOOTER="⚠️ This is an **unsigned** IPA. Sideload it with AltStore, Sideloadly, or TrollStore — it cannot be installed directly via App Store."
+          if [[ "${{ steps.meta.outputs.channel }}" == "release" ]]; then
+            gh release create "${{ steps.meta.outputs.tag }}" "$ipa" \
+              --title "${{ steps.meta.outputs.title }}" \
+              --notes "$NOTES_FOOTER" \
+              --generate-notes \
+              --verify-tag \
+              --latest
+          else
+            # Move the rolling "nightly" tag/release to this commit.
+            gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
+            gh release create nightly "$ipa" \
+              --target "$GITHUB_SHA" \
+              --title "${{ steps.meta.outputs.title }}" \
+              --notes "Built from ${{ steps.meta.outputs.sha }}. $NOTES_FOOTER" \
+              --prerelease
+          fi
