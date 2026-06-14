@@ -61,12 +61,12 @@ struct LabeledSlider: View {
         HStack(spacing: 10) {
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(.secondary)
                 .frame(width: 104, alignment: .leading)
             Slider(value: $value, in: range)
             Text("\(Int(value))")
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(width: 44, alignment: .trailing)
         }
     }

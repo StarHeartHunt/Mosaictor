@@ -69,9 +69,16 @@ final class CanvasContentNSView: NSView {
         return CGPoint(x: min(1, max(0, nx)), y: min(1, max(0, ny)))
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true                       // repaint backdrop on light/dark switch
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        ctx.setFillColor(NSColor.black.cgColor)
+        // Backdrop follows the system appearance (resolved against the view's
+        // current drawing appearance inside draw(_:)).
+        ctx.setFillColor(NSColor.windowBackgroundColor.cgColor)
         ctx.fill(bounds)
         guard let cg = displayCGImage else { return }
         ctx.interpolationQuality = .high

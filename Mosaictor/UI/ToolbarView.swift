@@ -26,8 +26,8 @@ struct ToolbarView: View {
                                 .lineLimit(1)
                         }
                         .frame(width: 70, height: 56)
-                        .background(selected ? Color.accentColor.opacity(0.25) : Color.white.opacity(0.06))
-                        .foregroundStyle(selected ? Color.accentColor : Color.white.opacity(0.85))
+                        .background(selected ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.06))
+                        .foregroundStyle(selected ? Color.accentColor : Color.primary.opacity(0.85))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)

@@ -25,7 +25,11 @@ struct CanvasView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> CanvasContentView {
         let view = CanvasContentView()
-        view.backgroundColor = .black
+        view.backgroundColor = .systemBackground
+        // Repaint the custom-drawn backdrop when light/dark changes live.
+        view.registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (v: CanvasContentView, _) in
+            v.setNeedsDisplay()
+        }
         context.coordinator.attach(to: view)
         return view
     }
@@ -137,7 +141,7 @@ final class CanvasContentView: UIView {
     }
 
     override func draw(_ rect: CGRect) {
-        UIColor.black.setFill()
+        UIColor.systemBackground.setFill()
         UIBezierPath(rect: bounds).fill()
         guard let cg = displayCGImage else { return }
         UIImage(cgImage: cg).draw(in: displayRect)

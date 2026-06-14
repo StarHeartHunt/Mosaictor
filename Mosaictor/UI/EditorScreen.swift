@@ -31,8 +31,12 @@ struct EditorScreen: View {
                 controls
             }
         }
-        .background(Color.black.ignoresSafeArea())
-        .preferredColorScheme(.dark)
+        // Follow the system light / dark appearance on every platform.
+        #if os(macOS)
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
+        #else
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        #endif
         .onChange(of: pickerItem) { _, item in loadPicked(item) }
         #if DEBUG
         .task {
@@ -61,30 +65,38 @@ struct EditorScreen: View {
         HStack(spacing: 18) {
             Text(verbatim: "Mosaictor")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Spacer()
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                Image(systemName: "photo.on.rectangle")
+                topBarIcon("photo.on.rectangle")
             }
             #if os(macOS)
-            Button { paste() } label: { Image(systemName: "doc.on.clipboard") }
+            Button { paste() } label: { topBarIcon("doc.on.clipboard") }
                 .keyboardShortcut("v", modifiers: .command)
                 .help("Paste image")
             #endif
-            Button { model.undo() } label: { Image(systemName: "arrow.uturn.backward") }
+            Button { model.undo() } label: { topBarIcon("arrow.uturn.backward") }
                 .disabled(!model.canUndo)
-            Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
+            Button { model.redo() } label: { topBarIcon("arrow.uturn.forward") }
                 .disabled(!model.canRedo)
-            Button { save() } label: { Image(systemName: "square.and.arrow.down") }
+            Button { save() } label: { topBarIcon("square.and.arrow.down") }
                 .disabled(!model.hasImage || isExporting)
-            Button { share() } label: { Image(systemName: "square.and.arrow.up") }
+            Button { share() } label: { topBarIcon("square.and.arrow.up") }
                 .disabled(!model.hasImage || isExporting)
         }
         .font(.system(size: 18))
-        .foregroundStyle(.white)
+        .foregroundStyle(.primary)
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.06))
+    }
+
+    /// Renders a top-bar symbol inside a fixed square box so every action
+    /// button has the same width/height regardless of the glyph's aspect ratio.
+    private func topBarIcon(_ name: String) -> some View {
+        Image(systemName: name)
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle())
     }
 
     // MARK: Canvas
@@ -110,7 +122,7 @@ struct EditorScreen: View {
                     ProgressView()
                     Text("Processing…")
                         .font(.caption)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 .padding(20)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -134,9 +146,9 @@ struct EditorScreen: View {
         VStack(spacing: 16) {
             Image(systemName: "photo.badge.plus")
                 .font(.system(size: 52))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
             Text("Choose a photo to start censoring")
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(.secondary)
             PhotosPicker(selection: $pickerItem, matching: .images) {
                 Text("Choose Photo")
                     .fontWeight(.semibold)
@@ -146,6 +158,7 @@ struct EditorScreen: View {
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
         }
     }
 
@@ -158,7 +171,7 @@ struct EditorScreen: View {
                 .padding(.horizontal, 16)
         }
         .padding(.vertical, 12)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.06))
     }
 
     // MARK: Actions
