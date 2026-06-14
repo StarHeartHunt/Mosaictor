@@ -15,6 +15,8 @@ struct EditorScreen: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var statusMessage: String?
     @State private var isExporting = false
+    /// Drives the transient "active tool" toast over the canvas.
+    @State private var toolToastVisible = false
 
     #if canImport(UIKit)
     @State private var shareItems: [Any]?
@@ -78,13 +80,13 @@ struct EditorScreen: View {
                 .keyboardShortcut("v", modifiers: .command)
                 .help("Paste image")
             #endif
-            Button { model.undo() } label: { topBarIcon("arrow.uturn.backward") }
+            Button { model.undo() } label: { topBarIcon("arrow.uturn.backward", enabled: model.canUndo) }
                 .disabled(!model.canUndo)
-            Button { model.redo() } label: { topBarIcon("arrow.uturn.forward") }
+            Button { model.redo() } label: { topBarIcon("arrow.uturn.forward", enabled: model.canRedo) }
                 .disabled(!model.canRedo)
-            Button { save() } label: { topBarIcon("square.and.arrow.down") }
+            Button { save() } label: { topBarIcon("square.and.arrow.down", enabled: model.hasImage && !isExporting) }
                 .disabled(!model.hasImage || isExporting)
-            Button { share() } label: { topBarIcon("square.and.arrow.up") }
+            Button { share() } label: { topBarIcon("square.and.arrow.up", enabled: model.hasImage && !isExporting) }
                 .disabled(!model.hasImage || isExporting)
         }
         .font(.system(size: 18))
@@ -96,10 +98,13 @@ struct EditorScreen: View {
 
     /// Renders a top-bar symbol inside a fixed square box so every action
     /// button has the same width/height regardless of the glyph's aspect ratio.
-    private func topBarIcon(_ name: String) -> some View {
+    /// Disabled actions are dimmed so the bar reads "greyed out" rather than
+    /// relying on `.disabled` alone (which the explicit foreground style hides).
+    private func topBarIcon(_ name: String, enabled: Bool = true) -> some View {
         Image(systemName: name)
             .frame(width: 24, height: 24)
             .contentShape(Rectangle())
+            .opacity(enabled ? 1 : 0.3)
     }
 
     // MARK: Canvas
@@ -130,6 +135,31 @@ struct EditorScreen: View {
                 .padding(20)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
             }
+        }
+        // A toast that names the freshly-selected tool, fading in over the
+        // bottom of the canvas and out again — like the iOS Photos editor.
+        .overlay(alignment: .bottom) {
+            if model.hasImage, toolToastVisible {
+                Text(model.activeTool.title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 8)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 28)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+        }
+        // `.task(id:)` cancels the previous timer whenever the tool changes, so
+        // rapid switches each get their own full flash without stacking.
+        .task(id: model.activeTool) {
+            guard model.hasImage else { return }
+            withAnimation(.easeOut(duration: 0.2)) { toolToastVisible = true }
+            try? await Task.sleep(for: .seconds(1.2))
+            // Cancelled means the tool already changed; let the new task drive it.
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.4)) { toolToastVisible = false }
         }
         #if os(macOS)
         .overlay {
