@@ -13,10 +13,23 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1B7310232FDD7D44001CD3B5 /* Mosaictor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1BA0000A2FDD7D44001CD3B5 /* Exceptions for "Mosaictor" folder in "Mosaictor" target */,
+			);
 			path = Mosaictor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1BA0000A2FDD7D44001CD3B5 /* Exceptions for "Mosaictor" folder in "Mosaictor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1B7310202FDD7D44001CD3B5 /* Mosaictor */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		1B73101E2FDD7D44001CD3B5 /* Frameworks */ = {
@@ -262,6 +275,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mosaictor/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your censored images to Photos.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -307,6 +321,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mosaictor/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your censored images to Photos.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

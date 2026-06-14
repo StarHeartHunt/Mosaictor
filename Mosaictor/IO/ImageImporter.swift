@@ -24,4 +24,14 @@ enum ImageImporter {
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
+
+    /// Decodes the image at `url`, e.g. one handed to us by the Share Sheet or an
+    /// "Open in" action from another app. Acquires security-scoped access first so
+    /// it works for files that live outside the app's sandbox container.
+    static func decode(contentsOf url: URL, maxPixel: Int = 4096) -> CGImage? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return decode(data, maxPixel: maxPixel)
+    }
 }

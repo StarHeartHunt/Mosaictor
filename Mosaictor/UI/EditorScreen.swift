@@ -38,6 +38,9 @@ struct EditorScreen: View {
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
         #endif
         .onChange(of: pickerItem) { _, item in loadPicked(item) }
+        // A photo shared / "opened in" from another app arrives here, both on a
+        // cold launch and while the editor is already open.
+        .onOpenURL { url in openExternalImage(url) }
         #if DEBUG
         .task {
             switch ProcessInfo.processInfo.environment["MOSAICTOR_DEMO"] {
@@ -186,6 +189,30 @@ struct EditorScreen: View {
                 statusMessage = String(localized: "Could not load that image.")
             }
         }
+    }
+
+    /// Loads an image handed to us by another app (Share Sheet / "Open in").
+    private func openExternalImage(_ url: URL) {
+        Task {
+            defer { removeInboxCopy(url) }
+            if let cg = ImageImporter.decode(contentsOf: url) {
+                model.loadImage(cg)
+            } else {
+                statusMessage = String(localized: "Could not load that image.")
+            }
+        }
+    }
+
+    /// When another app shares a file, the system drops a disposable copy into
+    /// our Documents/Inbox. Remove it once decoded; leave external files alone.
+    private func removeInboxCopy(_ url: URL) {
+        guard url.isFileURL,
+              let inbox = try? FileManager.default.url(
+                for: .documentDirectory, in: .userDomainMask,
+                appropriateFor: nil, create: false).appendingPathComponent("Inbox"),
+              url.path.hasPrefix(inbox.path)
+        else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 
     #if os(macOS)
